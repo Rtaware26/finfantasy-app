@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Profile
+  name          String?
+  examPassed    Boolean   @default(false)
+  examScore     Int?
+  
+  // Relations
+  portfolios    Portfolio[]
+  trades        Trade[]
+  competitions  CompetitionParticipant[]
+  referredBy    String?
+  referralCode  String?   @unique
+}
+
+model Competition {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  startDate     DateTime
+  endDate       DateTime
+  entryFee      Float
+  tier          TierLevel
+  prizePool     Float
+  maxParticipants Int
+  status        CompetitionStatus @default(UPCOMING)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  participants  CompetitionParticipant[]
+}
+
+model CompetitionParticipant {
+  id            String    @id @default(cuid())
+  userId        String
+  competitionId String
+  joinedAt      DateTime  @default(now())
+  rank          Int?
+  score         Float     @default(0)
+  
+  // Relations
+  user          User      @relation(fields: [userId], references: [id])
+  competition   Competition @relation(fields: [competitionId], references: [id])
+
+  @@unique([userId, competitionId])
+}
+
+model Portfolio {
+  id            String    @id @default(cuid())
+  userId        String
+  balance       Float     @default(100000) // Starting balance for simulation
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  user          User      @relation(fields: [userId], references: [id])
+  trades        Trade[]
+}
+
+model Trade {
+  id            String    @id @default(cuid())
+  portfolioId   String
+  userId        String
+  symbol        String
+  type          TradeType
+  quantity      Int
+  price         Float
+  status        TradeStatus @default(EXECUTED)
+  createdAt     DateTime  @default(now())
+  executedAt    DateTime?
+
+  // Relations
+  portfolio     Portfolio @relation(fields: [portfolioId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
+}
+
+enum TierLevel {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum CompetitionStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum TradeType {
+  BUY
+  SELL
+}
+
+enum TradeStatus {
+  PENDING
+  EXECUTED
+  CANCELLED
+  FAILED
+} 
